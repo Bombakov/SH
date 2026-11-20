@@ -1,0 +1,39 @@
+// Конфигурация
+let CONFIG = {
+    checkInterval: 15000,     //
+    powerThreshold: 26.3// Порог отключения (ватт)
+};
+
+// Переменная для хранения ID таймера
+let timerId = null;
+
+// Функция проверки потребления
+function checkPowerAndTurnOff() {
+    Shelly.call("Switch.GetStatus", { "id": 0 }, function(result) {
+        let power = result.apower || 0;
+        
+        print("Текущее потребление: " + power.toFixed(1) + " W");
+        
+        // Если потребление меньше порога
+        if (power < CONFIG.powerThreshold) {
+            print("⚠️ Потребление ниже " + CONFIG.powerThreshold + "W. Отключаем розетку...");
+            
+            // Отключаем розетку
+            Shelly.call("Switch.Set", { "id": 0, "on": false });
+            
+            // Останавливаем ск��ипт
+            //if (timerId !== null) {
+            //    Timer.clear(timerId); // Останавливаем таймер
+            //}
+            //print("🛑 Скрипт остановлен. Розетка выключена.");
+        }
+    });
+}
+
+// Запускаем проверку прямо сейчас
+checkPowerAndTurnOff();
+
+// Сохраняем ID таймера и запускаем его
+timerId = Timer.set(CONFIG.checkInterval, true, checkPowerAndTurnOff);
+
+print("✅ Скрипт запущен. Отключаю при падении ниже " + CONFIG.powerThreshold + "W");
