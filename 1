@@ -1,0 +1,51 @@
+// Конфигурация
+let CONFIG = {
+    intervalMinutes: 20,     // Интервал включения (минут)
+    checkInterval: 15000      // 
+};
+
+// Функция форматирования времени
+function getTimeString() {
+    let time = Shelly.getComponentStatus("sys").time; // Строка времени от системы
+    return time || "unknown"; // Если время недоступно, вернуть "unknown"
+}
+
+// Функция включения розетки
+function turnOnSocket() {
+    Shelly.call("Switch.Set", { "id": 0, "on": true }, function(result) {
+        print("✅ Розетка включена в " + getTimeString());
+    });
+}
+
+// Переменная для хранения времени последнего включения
+let lastTurnOnTime = Shelly.getComponentStatus("sys").unixtime;
+
+// Функция проверки времени
+function checkTimeAndTurnOn() {
+    let currentTime = Shelly.getComponentStatus("sys").unixtime;
+    let elapsedMinutes = (currentTime - lastTurnOnTime) / 60;
+    print("До вкл : " + elapsedMinutes.toFixed(1));
+    
+    // Если прошло 20 минут или больше
+    if (elapsedMinutes >= CONFIG.intervalMinutes) {
+        turnOnSocket();
+        lastTurnOnTime = currentTime; // Обновляем время последнего включения
+    }
+}
+
+// Запускаем проверку прямо сейчас
+checkTimeAndTurnOn();
+
+// И запускаем таймер 
+Timer.set(CONFIG.checkInterval, true, checkTimeAndTurnOn);
+
+// Включаем автозапуск при загрузке
+Shelly.addStatusHandler(function(event) {
+    if (event.component === "sys" && event.delta && event.delta.uptime !== undefined) {
+        if (event.delta.uptime < 5) { // 
+            print("🔄 Перезагрузка обнаружена, продолжаем работу...");
+        }
+    }
+});
+
+print("🕒 Скрипт запущен. Розетка будет включаться кажды�� " + CONFIG.intervalMinutes + " минут");
